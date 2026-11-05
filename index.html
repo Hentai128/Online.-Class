@@ -3,85 +3,434 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>کلاس آنلاین تستی</title>
+  <title>کلاس آنلاین</title>
+
+  <link rel="icon" href="data:," />
+
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
   <style>
-    body { font-family: system-ui, sans-serif; text-align: center; padding: 16px; }
-    #videos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
-    video { width: 100%; background: #111; border-radius: 12px; }
-    input, button { padding: 10px; font-size: 16px; border-radius: 8px; }
-    button { cursor: pointer; }
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, Tahoma, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f4f6fb;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 22px;
+      text-align: center;
+      margin: 8px 0 16px;
+    }
+
+    .card {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    select, input, button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    #videos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    video {
+      width: 100%;
+      background: black;
+      border-radius: 12px;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+    }
+
+    .video-box {
+      position: relative;
+    }
+
+    .video-label {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,.6);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    #chat {
+      margin-top: 16px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #messages {
+      height: 180px;
+      overflow-y: auto;
+      padding: 10px;
+      background: #fafafa;
+    }
+
+    .message {
+      background: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      max-width: 85%;
+    }
+
+    .message.me {
+      background: #dbeafe;
+      margin-left: auto;
+    }
+
+    .message .sender {
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 3px;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      border-top: 1px solid #ddd;
+    }
+
+    .chat-input input {
+      margin-bottom: 0;
+    }
+
+    .chat-input button {
+      width: 90px;
+      margin-bottom: 0;
+    }
+
+    .status {
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+      margin-top: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h1>کلاس آنلاین تستی</h1>
 
-  <div id="join">
-    <p>شناسهٔ اتاق را وارد کن: ۱ تا ۴</p>
-    <input id="roomId" type="number" min="1" max="4" placeholder="مثلاً 1" />
-    <button onclick="joinRoom()">ورود به کلاس</button>
+  <div class="card">
+    <h1>کلاس آنلاین</h1>
+
+    <div id="joinBox">
+      <label>نقش خود را انتخاب کن</label>
+      <select id="role">
+        <option value="student">دانش‌آموز</option>
+        <option value="teacher">معلم</option>
+      </select>
+
+      <label>شناسهٔ اتاق را انتخاب کن</label>
+      <select id="roomId">
+        <option value="1">اتاق ۱</option>
+        <option value="2">اتاق ۲</option>
+        <option value="3">اتاق ۳</option>
+        <option value="4">اتاق ۴</option>
+      </select>
+
+      <label>اسم تو</label>
+      <input id="name" placeholder="مثلاً علی" />
+
+      <button id="joinButton" onclick="joinClass()">ورود به کلاس</button>
+
+      <p class="status">
+        دانش‌آموز بدون دوربین و میکروفون هم می‌تواند وارد شود.
+      </p>
+    </div>
+
+    <div id="classBox" class="hidden">
+      <div id="videos"></div>
+
+      <div id="chat">
+        <div id="messages"></div>
+
+        <div class="chat-input">
+          <input id="chatText" placeholder="پیام بنویس..." onkeydown="if(event.key==='Enter') sendMessage()" />
+          <button onclick="sendMessage()">ارسال</button>
+        </div>
+      </div>
+
+      <p class="status" id="connectionStatus"></p>
+    </div>
   </div>
 
-  <div id="videos"></div>
-
   <script>
-    let peer;
-    let myStream;
-    const connections = {};
+    const PEER_OPTIONS = {
+      debug: 1
+    };
 
-    function addVideo(id, stream, muted = false) {
+    let peer;
+    let myStream = null;
+    let teacherConn = null;
+    const studentConns = {};
+    const myName = () => document.getElementById('name').value.trim() || 'کاربر';
+
+    function showClass() {
+      document.getElementById('joinBox').classList.add('hidden');
+      document.getElementById('classBox').classList.remove('hidden');
+    }
+
+    function setStatus(text) {
+      document.getElementById('connectionStatus').textContent = text;
+    }
+
+    function addVideo(id, stream, label, muted = false) {
       if (document.getElementById(id)) return;
+
+      const box = document.createElement('div');
+      box.className = 'video-box';
+      box.id = id;
+
       const video = document.createElement('video');
-      video.id = id;
       video.srcObject = stream;
       video.autoplay = true;
       video.playsInline = true;
       video.muted = muted;
-      document.getElementById('videos').appendChild(video);
+
+      const nameTag = document.createElement('div');
+      nameTag.className = 'video-label';
+      nameTag.textContent = label;
+
+      box.appendChild(video);
+      box.appendChild(nameTag);
+      document.getElementById('videos').appendChild(box);
     }
 
-    async function joinRoom() {
+    function addMessage(sender, text, isMe = false) {
+      const messages = document.getElementById('messages');
+
+      const div = document.createElement('div');
+      div.className = 'message' + (isMe ? ' me' : '');
+
+      const senderDiv = document.createElement('div');
+      senderDiv.className = 'sender';
+      senderDiv.textContent = sender;
+
+      const textDiv = document.createElement('div');
+      textDiv.textContent = text;
+
+      div.appendChild(senderDiv);
+      div.appendChild(textDiv);
+      messages.appendChild(div);
+
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chatText');
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      const data = {
+        type: 'chat',
+        name: myName(),
+        text: text
+      };
+
+      if (document.getElementById('role').value === 'teacher') {
+        Object.values(studentConns).forEach(conn => {
+          if (conn.open) conn.send(data);
+        });
+      } else if (teacherConn && teacherConn.open) {
+        teacherConn.send(data);
+      }
+
+      addMessage('من', text, true);
+      input.value = '';
+    }
+
+    function handleChatData(data) {
+      if (data && data.type === 'chat') {
+        addMessage(data.name, data.text);
+      }
+    }
+
+    async function joinClass() {
+      const role = document.getElementById('role').value;
       const room = document.getElementById('roomId').value;
-      if (!room || room < 1 || room > 4) {
-        alert('فقط عدد ۱ تا ۴ را وارد کن');
+
+      document.getElementById('joinButton').disabled = true;
+      setStatus('در حال اتصال...');
+
+      if (role === 'teacher') {
+        await joinAsTeacher(room);
+      } else {
+        await joinAsStudent(room);
+      }
+    }
+
+    async function joinAsTeacher(room) {
+      try {
+        myStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+
+        addVideo('teacher-video', myStream, 'معلم', true);
+      } catch (err) {
+        alert('دوربین یا میکروفون در دسترس نیست.\nبرای معلم بودن باید حداقل میکروفون یا دوربین فعال باشد.');
+        document.getElementById('joinButton').disabled = false;
+        setStatus('');
         return;
       }
 
-      document.getElementById('join').style.display = 'none';
-
-      myStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-
-      addVideo('me', myStream, true);
-
-      peer = new Peer('class-room-' + room + '-' + Math.random().toString(36).slice(2, 8));
+      peer = new Peer('class-room-' + room + '-teacher', PEER_OPTIONS);
 
       peer.on('open', () => {
-        console.log('وارد اتاق شدی:', room);
+        showClass();
+        setStatus('معلم هستی. منتظر ورود دانش‌آموزان...');
+      });
+
+      peer.on('connection', conn => {
+        studentConns[conn.peer] = conn;
+
+        conn.on('open', () => {
+          conn.send({
+            type: 'chat',
+            name: 'سیستم',
+            text: 'به کلاس خوش آمدی.'
+          });
+
+          if (myStream) {
+            const call = peer.call(conn.peer, myStream);
+          }
+        });
+
+        conn.on('data', handleChatData);
+
+        conn.on('close', () => {
+          delete studentConns[conn.peer];
+        });
       });
 
       peer.on('call', call => {
         call.answer(myStream);
+
         call.on('stream', remoteStream => {
-          addVideo(call.peer, remoteStream);
+          addVideo(call.peer, remoteStream, 'دانش‌آموز');
         });
       });
 
-      peer.on('connection', conn => {
-        conn.on('open', () => {
-          const call = peer.call(conn.peer, myStream);
-          call.on('stream', remoteStream => {
-            addVideo(call.peer, remoteStream);
+      peer.on('error', err => {
+        setStatus('خطا: ' + err.type);
+      });
+    }
+
+    async function joinAsStudent(room) {
+      let hasCamera = false;
+      let hasMic = false;
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+
+        hasCamera = devices.some(device => device.kind === 'videoinput');
+        hasMic = devices.some(device => device.kind === 'audioinput');
+      } catch (err) {
+        console.warn('بررسی دستگاه‌ها ممکن نشد:', err);
+      }
+
+      try {
+        myStream = await navigator.mediaDevices.getUserMedia({
+          video: hasCamera,
+          audio: hasMic
+        });
+
+        addVideo('my-video', myStream, 'من', true);
+      } catch (err) {
+        console.warn('دوربین/میکروفون در دسترس نیست:', err);
+        myStream = null;
+      }
+
+      peer = new Peer(PEER_OPTIONS);
+
+      const teacherId = 'class-room-' + room + '-teacher';
+
+      peer.on('open', () => {
+        teacherConn = peer.connect(teacherId, {
+          reliable: true
+        });
+
+        teacherConn.on('open', () => {
+          showClass();
+          setStatus('وارد اتاق ' + room + ' شدی.');
+
+          teacherConn.send({
+            type: 'student-ready',
+            name: myName()
           });
         });
+
+        teacherConn.on('data', handleChatData);
+
+        teacherConn.on('close', () => {
+          setStatus('ارتباط با معلم قطع شد.');
+        });
       });
 
-      // اتصال به بقیه اعضای همان اتاق
-      // این نسخه تستی است؛ برای اتصال خودکار به همه، بعداً لیست اعضا را با سیگنالینگ مدیریت می‌کنیم.
-      alert('وارد اتاق ' + room + ' شدی. حالا روی دستگاه دیگر هم همان عدد را وارد کن.');
+      peer.on('call', call => {
+        call.answer(myStream || undefined);
+
+        call.on('stream', remoteStream => {
+          addVideo('teacher-video', remoteStream, 'معلم');
+        });
+      });
+
+      peer.on('error', err => {
+        if (err.type === 'peer-unavailable') {
+          setStatus('معلم در این اتاق هنوز وارد نشده است.');
+        } else {
+          setStatus('خطا: ' + err.type);
+        }
+      });
     }
   </script>
+
 </body>
 </html>
