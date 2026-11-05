@@ -21,8 +21,8 @@
     }
 
     h1 {
-      font-size: 22px;
       text-align: center;
+      font-size: 22px;
       margin: 8px 0 16px;
     }
 
@@ -37,8 +37,8 @@
 
     label {
       display: block;
-      margin-bottom: 6px;
       font-weight: bold;
+      margin-bottom: 6px;
     }
 
     select, input, button {
@@ -54,8 +54,8 @@
       background: #2563eb;
       color: white;
       border: none;
-      cursor: pointer;
       font-weight: bold;
+      cursor: pointer;
     }
 
     button:disabled {
@@ -65,16 +65,16 @@
 
     #videos {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 12px;
       margin-top: 16px;
     }
 
     video {
       width: 100%;
+      aspect-ratio: 4 / 3;
       background: black;
       border-radius: 12px;
-      aspect-ratio: 4 / 3;
       object-fit: cover;
     }
 
@@ -86,7 +86,7 @@
       position: absolute;
       top: 8px;
       right: 8px;
-      background: rgba(0,0,0,.6);
+      background: rgba(0,0,0,.65);
       color: white;
       padding: 4px 8px;
       border-radius: 8px;
@@ -120,7 +120,7 @@
       margin-left: auto;
     }
 
-    .message .sender {
+    .sender {
       font-size: 12px;
       color: #555;
       margin-bottom: 3px;
@@ -144,8 +144,8 @@
 
     .status {
       text-align: center;
-      font-size: 14px;
       color: #555;
+      font-size: 14px;
       margin-top: 10px;
     }
 
@@ -166,7 +166,7 @@
         <option value="teacher">معلم</option>
       </select>
 
-      <label>شناسهٔ اتاق را انتخاب کن</label>
+      <label>اتاق را انتخاب کن</label>
       <select id="roomId">
         <option value="1">اتاق ۱</option>
         <option value="2">اتاق ۲</option>
@@ -180,7 +180,7 @@
       <button id="joinButton" onclick="joinClass()">ورود به کلاس</button>
 
       <p class="status">
-        دانش‌آموز بدون دوربین و میکروفون هم می‌تواند وارد شود.
+        دانش‌آموز بدون دوربین و میکروفون می‌تواند وارد شود و صدا و تصویر معلم را ببیند.
       </p>
     </div>
 
@@ -201,15 +201,18 @@
   </div>
 
   <script>
-    const PEER_OPTIONS = {
-      debug: 1
-    };
-
     let peer;
-    let myStream = null;
+    let teacherStream = null;
     let teacherConn = null;
     const studentConns = {};
-    const myName = () => document.getElementById('name').value.trim() || 'کاربر';
+
+    function getRoomId() {
+      return document.getElementById('roomId').value;
+    }
+
+    function getName() {
+      return document.getElementById('name').value.trim() || 'کاربر';
+    }
 
     function showClass() {
       document.getElementById('joinBox').classList.add('hidden');
@@ -245,8 +248,8 @@
     function addMessage(sender, text, isMe = false) {
       const messages = document.getElementById('messages');
 
-      const div = document.createElement('div');
-      div.className = 'message' + (isMe ? ' me' : '');
+      const message = document.createElement('div');
+      message.className = 'message' + (isMe ? ' me' : '');
 
       const senderDiv = document.createElement('div');
       senderDiv.className = 'sender';
@@ -255,11 +258,17 @@
       const textDiv = document.createElement('div');
       textDiv.textContent = text;
 
-      div.appendChild(senderDiv);
-      div.appendChild(textDiv);
-      messages.appendChild(div);
+      message.appendChild(senderDiv);
+      message.appendChild(textDiv);
+      messages.appendChild(message);
 
       messages.scrollTop = messages.scrollHeight;
+    }
+
+    function handleData(data) {
+      if (data && data.type === 'chat') {
+        addMessage(data.name, data.text);
+      }
     }
 
     function sendMessage() {
@@ -270,13 +279,13 @@
 
       const data = {
         type: 'chat',
-        name: myName(),
+        name: getName(),
         text: text
       };
 
       if (document.getElementById('role').value === 'teacher') {
-        Object.values(studentConns).forEach(conn => {
-          if (conn.open) conn.send(data);
+        Object.values(studentConns).forEach(connection => {
+          if (connection.open) connection.send(data);
         });
       } else if (teacherConn && teacherConn.open) {
         teacherConn.send(data);
@@ -286,15 +295,9 @@
       input.value = '';
     }
 
-    function handleChatData(data) {
-      if (data && data.type === 'chat') {
-        addMessage(data.name, data.text);
-      }
-    }
-
     async function joinClass() {
       const role = document.getElementById('role').value;
-      const room = document.getElementById('roomId').value;
+      const room = getRoomId();
 
       document.getElementById('joinButton').disabled = true;
       setStatus('در حال اتصال...');
@@ -308,87 +311,53 @@
 
     async function joinAsTeacher(room) {
       try {
-        myStream = await navigator.mediaDevices.getUserMedia({
+        teacherStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
         });
-
-        addVideo('teacher-video', myStream, 'معلم', true);
       } catch (err) {
-        alert('دوربین یا میکروفون در دسترس نیست.\nبرای معلم بودن باید حداقل میکروفون یا دوربین فعال باشد.');
+        alert('برای معلم بودن، دوربین و میکروفون باید در دسترس باشد.');
         document.getElementById('joinButton').disabled = false;
         setStatus('');
         return;
       }
 
-      peer = new Peer('class-room-' + room + '-teacher', PEER_OPTIONS);
+      addVideo('teacher-video', teacherStream, 'معلم', true);
+
+      peer = new Peer('class-room-' + room + '-teacher');
 
       peer.on('open', () => {
         showClass();
-        setStatus('معلم هستی. منتظر ورود دانش‌آموزان...');
+        setStatus('معلم وارد شد. منتظر دانش‌آموزان...');
       });
 
-      peer.on('connection', conn => {
-        studentConns[conn.peer] = conn;
+      peer.on('connection', connection => {
+        studentConns[connection.peer] = connection;
 
-        conn.on('open', () => {
-          conn.send({
+        connection.on('open', () => {
+          connection.send({
             type: 'chat',
             name: 'سیستم',
             text: 'به کلاس خوش آمدی.'
           });
 
-          if (myStream) {
-            const call = peer.call(conn.peer, myStream);
-          }
+          peer.call(connection.peer, teacherStream);
         });
 
-        conn.on('data', handleChatData);
+        connection.on('data', handleData);
 
-        conn.on('close', () => {
-          delete studentConns[conn.peer];
+        connection.on('close', () => {
+          delete studentConns[connection.peer];
         });
       });
 
-      peer.on('call', call => {
-        call.answer(myStream);
-
-        call.on('stream', remoteStream => {
-          addVideo(call.peer, remoteStream, 'دانش‌آموز');
-        });
-      });
-
-      peer.on('error', err => {
-        setStatus('خطا: ' + err.type);
+      peer.on('error', error => {
+        setStatus('خطا: ' + error.type);
       });
     }
 
     async function joinAsStudent(room) {
-      let hasCamera = false;
-      let hasMic = false;
-
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-
-        hasCamera = devices.some(device => device.kind === 'videoinput');
-        hasMic = devices.some(device => device.kind === 'audioinput');
-      } catch (err) {
-        console.warn('بررسی دستگاه‌ها ممکن نشد:', err);
-      }
-
-      try {
-        myStream = await navigator.mediaDevices.getUserMedia({
-          video: hasCamera,
-          audio: hasMic
-        });
-
-        addVideo('my-video', myStream, 'من', true);
-      } catch (err) {
-        console.warn('دوربین/میکروفون در دسترس نیست:', err);
-        myStream = null;
-      }
-
-      peer = new Peer(PEER_OPTIONS);
+      peer = new Peer();
 
       const teacherId = 'class-room-' + room + '-teacher';
 
@@ -403,11 +372,11 @@
 
           teacherConn.send({
             type: 'student-ready',
-            name: myName()
+            name: getName()
           });
         });
 
-        teacherConn.on('data', handleChatData);
+        teacherConn.on('data', handleData);
 
         teacherConn.on('close', () => {
           setStatus('ارتباط با معلم قطع شد.');
@@ -415,18 +384,18 @@
       });
 
       peer.on('call', call => {
-        call.answer(myStream || undefined);
+        call.answer();
 
-        call.on('stream', remoteStream => {
-          addVideo('teacher-video', remoteStream, 'معلم');
+        call.on('stream', stream => {
+          addVideo('teacher-video', stream, 'معلم');
         });
       });
 
-      peer.on('error', err => {
-        if (err.type === 'peer-unavailable') {
-          setStatus('معلم در این اتاق هنوز وارد نشده است.');
+      peer.on('error', error => {
+        if (error.type === 'peer-unavailable') {
+          setStatus('معلم هنوز وارد اتاق نشده است. بعد از ورود معلم، صفحه را رفرش کن.');
         } else {
-          setStatus('خطا: ' + err.type);
+          setStatus('خطا: ' + error.type);
         }
       });
     }
