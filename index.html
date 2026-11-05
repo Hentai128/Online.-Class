@@ -1,1 +1,87 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>کلاس آنلاین تستی</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; text-align: center; padding: 16px; }
+    #videos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
+    video { width: 100%; background: #111; border-radius: 12px; }
+    input, button { padding: 10px; font-size: 16px; border-radius: 8px; }
+    button { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>کلاس آنلاین تستی</h1>
 
+  <div id="join">
+    <p>شناسهٔ اتاق را وارد کن: ۱ تا ۴</p>
+    <input id="roomId" type="number" min="1" max="4" placeholder="مثلاً 1" />
+    <button onclick="joinRoom()">ورود به کلاس</button>
+  </div>
+
+  <div id="videos"></div>
+
+  <script>
+    let peer;
+    let myStream;
+    const connections = {};
+
+    function addVideo(id, stream, muted = false) {
+      if (document.getElementById(id)) return;
+      const video = document.createElement('video');
+      video.id = id;
+      video.srcObject = stream;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = muted;
+      document.getElementById('videos').appendChild(video);
+    }
+
+    async function joinRoom() {
+      const room = document.getElementById('roomId').value;
+      if (!room || room < 1 || room > 4) {
+        alert('فقط عدد ۱ تا ۴ را وارد کن');
+        return;
+      }
+
+      document.getElementById('join').style.display = 'none';
+
+      myStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      addVideo('me', myStream, true);
+
+      peer = new Peer('class-room-' + room + '-' + Math.random().toString(36).slice(2, 8));
+
+      peer.on('open', () => {
+        console.log('وارد اتاق شدی:', room);
+      });
+
+      peer.on('call', call => {
+        call.answer(myStream);
+        call.on('stream', remoteStream => {
+          addVideo(call.peer, remoteStream);
+        });
+      });
+
+      peer.on('connection', conn => {
+        conn.on('open', () => {
+          const call = peer.call(conn.peer, myStream);
+          call.on('stream', remoteStream => {
+            addVideo(call.peer, remoteStream);
+          });
+        });
+      });
+
+      // اتصال به بقیه اعضای همان اتاق
+      // این نسخه تستی است؛ برای اتصال خودکار به همه، بعداً لیست اعضا را با سیگنالینگ مدیریت می‌کنیم.
+      alert('وارد اتاق ' + room + ' شدی. حالا روی دستگاه دیگر هم همان عدد را وارد کن.');
+    }
+  </script>
+</body>
+</html>
